@@ -1,0 +1,105 @@
+Identify a workstation or create a new linux server (Ubuntu/Redhat) instance using amazon EC2
+Identify a node  or create a new linux server (Ubuntu/Redhat) instance using amazon EC2     Download the chef starter kit and upload to workstation using winscp
+
+Login into workstation and download ChefDK
+curl -L https://www.opscode.com/chef/install.sh | bash
+
+Login into node and enable root user by performing following steps
+Login into putty with user ubuntu/ec2-user
+Type sudo -i/sudo su - for root shell
+
+cd  /etc/ssh
+vi sshd_config
+Ensure PermitRootLogin  is not commented
+Enable permit root login to yes in sshd_config of node
+
+Goto workstation:
+
+Create a chef-client(to communicate with chef server from Node) on the node by using following commandNote: 
+should run boostrap from - Chef repo directory ,
+
+(Step 4: have to move "node.pem" to (/home/ubuntu(ec2-user)) in Workstation") using winscp if you are working in windows)
+
+knife bootstrap Private ip of Node --ssh-user ubuntu/ec2-user --sudo --identity-file /home/ubuntu(ec2-user)/Node.pem  -N <public DNS of NODE>
+
+
+
+Navigate into chef-repo and create cookbook for motd by typing
+
+#knife cookbook create motd
+
+Edit default.rb by using vi or nano command
+
+Add the following statements
+#vi default.rb
+
+            template “/etc/motd” do
+                        source “motd.erb”
+                        mode “0644”
+            end
+
+Now navigate to templates/default directory
+     
+Create file motd.erb
+#vi motd.rerb
+Type any text “Welcome to Chef World”  
+  
+Upload cookbook by 
+#knife cookbook upload motd
+
+ 
+Apply recipe to node by typing 
+#knife node run_list add <NODE/PubDNS> recipe[motd]
+
+Apache cook book creation:
+
+#knife cookbook create apache
+open defaul.rb of apache and write below lines
+
+#vi \chef-repo\cookbooks\apache\recipes\default.rb
+
+package "httpd" do
+action :install
+end
+service "httpd" do
+action [:enable, :start]
+end
+
+save&exit
+
+#knife cookbook upload apache
+#knife node run_list add pubdns-of-Node "recipe[apache]"
+
+goto node
+
+and run chef-client if you want to refelct changes before convergence
+
+Mysql/mariadb:recipe:
+
+package "mariadb-server" do
+action :install
+end
+package "mariadb" do
+action :install
+end
+service "mariadb" do
+action[:enable, :start]
+end
+
+Php mutipackage install format:
+
+package ['php','php-mysql'] do
+action :install
+end
+
+creating php file in apache default dir. 
+
+file '/var/www/html/info.php' do
+content  '<?php phpinfo(); ?>'
+mode '0755'
+end
+
+Restaring service
+
+Deleting Cookbook goto workstation:
+#knife cookbook delete cookbookname version
